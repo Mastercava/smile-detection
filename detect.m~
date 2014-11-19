@@ -98,13 +98,13 @@ A=10;
 
 figure;
 subplot(2, 2, 1);
-imshow(photo);
 title('Original image')
+imshow(photo);
 
 subplot(2, 2, 2);
+title('Face color provbability')
 [v, i]=max(sps);
 imshow(photo);
-title('Face color provbability')
 hold on;
 spimage=imresize(reshape(sps, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
 imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
@@ -114,9 +114,9 @@ rectangle('Position',[js(i) is(i) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 
 subplot(2, 2, 3);
+title('Distance from face space')
 [v, j]=min(dffss);
 imshow(photo);
-title('Distance from face space')
 hold on;
 spimage=imresize(reshape(dffss, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
 imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
@@ -125,11 +125,11 @@ set(phandle, 'AlphaData', A);
 rectangle('Position',[js(j) is(j) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 subplot(2, 2, 4);
+title('Distance from mean face')
 [v, k]=min(difss);
 spimage=imresize(reshape(difss, round((H-wh)/step), []), [H-wh W-ww]);
 imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
 phandle=imagesc(imag/max(max(imag))*255);
-title('Distance from mean face')
 set(phandle, 'AlphaData', A);
 rectangle('Position',[js(k) is(k) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
@@ -138,9 +138,9 @@ rectangle('Position',[js(k) is(k) 72 100], 'LineWidth',2, 'EdgeColor','b');
 classif=(sps/max(sps)) .* (dffss/max(dffss)) .* (difss/max(difss));
 
 figure;
+title('Original image')
 [v, i]=max(classif);
 imshow(photo);
-title('Composed criterion and detected global minimum')
 hold on;
 spimage=imresize(reshape(sps, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
 imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
