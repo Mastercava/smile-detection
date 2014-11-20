@@ -28,6 +28,7 @@ difss=zeros(scales,nwins);
 sps=zeros(scales,nwins);
 
 for s=1:scales
+    fprintf('Searching on scale %d\n', s);
     cwh=round(wh*1.25^(s-1));
     cww=round(ww*1.25^(s-1));
     ind=1;

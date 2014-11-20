@@ -22,7 +22,8 @@ function result = get_smile_angle(image)
     angle = smile_angulation(points);
     
     %UNCOMMENT TO PLOT
-    %plot_result(contiguousArea,corners,points);
+    figure;
+    plot_result(contiguousArea,corners,points);
     
     %RETURN RESULT
     result = normalize_value(angle,0,60);

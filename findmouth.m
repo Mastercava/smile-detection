@@ -1,6 +1,6 @@
 function I = findmouth(im_face, file_name)
 
-SHOW_FINDMOUTH = false;
+SHOW_FINDMOUTH = true;
 
 %% 9-1 Turn original image into color map Cr, Cb
 ycbcrmap = rgb2ycbcr(im_face);
