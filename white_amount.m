@@ -1,4 +1,6 @@
 function y = white_amount(image)
-    thresholded = threshold
-    y = sum(sum(image>200));
+    gray = rgb2gray(image);
+    aperture = gray;
+    aperture(gray<45) = 255;
+    y = sum(sum(aperture>200));
 end
