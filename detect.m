@@ -59,7 +59,7 @@ disp_eigenfaces(eigenfaces, [100 72]);
 
 
 %% detect faces
-photo=imread('data/test.png');
+photo=imread('data/test/DSC00017.JPG');
 
 [H, W, k]=size(photo);
 I=double(reshape(rgb2ycbcr(photo), H*W, 3));
@@ -70,31 +70,120 @@ P=reshape(ps, H, W);
 
 wh=100;
 ww=72;
-is=[];
-js=[];
-dffss=[];
-difss=[];
-sps=[];
-
 m=10;
-step=2;
+scales=5;
+step=10;
 
-for j=1:step:(W-ww-1)
-    for i=1:step:(H-wh-1)
-        lumi=Y(i:i+wh-1, j:j+ww-1);
-        dffss(end+1)=dffs(lumi(:), eigenfaces, X_mean, m);
-        difss(end+1)=sqrt(sum((lumi(:)-X_mean).^2));
-        
-        skin=P(i:i+wh-1, j:j+ww-1);
-        sps(end+1)=sum(skin(:));
-        is(end+1)=i;
-        js(end+1)=j;
+nwins=round((W-cww-1)*(H-cwh-1)/step^2);
+is=zeros(scales,nwins);
+js=zeros(scales,nwins);
+dffss=zeros(scales,nwins);
+difss=zeros(scales,nwins);
+sps=zeros(scales,nwins);
+
+
+cwh=wh;
+cww=ww;
+for s=1:scales
+    s
+    cwh=round(wh*1.25^(s-1));
+    cww=round(ww*1.25^(s-1));
+    ind=1;
+    for j=1:step:(W-cww-1)
+        for i=1:step:(H-cwh-1)
+            lumi=Y(i:i+cwh-1, j:j+cww-1);
+            lumi=imresize(lumi, [wh ww]);
+            dffss(s,ind)=dffs(lumi(:), eigenfaces, X_mean, m);
+            difss(s,ind)=sqrt(sum((lumi(:)-X_mean).^2));
+
+            skin=P(i:i+cwh-1, j:j+cww-1);
+            skin=imresize(skin, [wh ww]);
+            sps(s,ind)=mean(skin(:));
+            is(s,ind)=i;
+            js(s,ind)=j;
+            ind=ind+1;
+        end
     end
 end
 
+spsp=sps/max(max(sps));
+dffssp=1-dffss/max(max(dffss));
+difssp=1-difss/max(max(difss));
+
+%% plot scale space
+figure;
+subplot(2,3,1);
+imshow(photo);
+
+classif=spsp .* dffssp .* difssp;
+classif=classif/max(max(classif));
+
+for i=1:scales
+    subplot(2,3,i+1);
+    imshow(photo);
+    hold on;
+    img=scale_output(classif, sps, i, H,W,wh,ww,step);
+    phandle=imagesc(img, [0 1]);
+    set(phandle, 'AlphaData', 125);
+end
+
+%%
+classif=spsp .* dffssp .* difssp;
+classif=classif/max(max(classif));
+
+% imagesc(scale_output(classif>.3, sps, 1, H,W,wh,ww,step));
+
+classif=classif(1,1:sum(sps(1,:)>0));
+bin=classif>.3;
+bin=reshape(bin,  ceil((H-wh-1)/step), []);
+
+[class, num]=bwlabel(bin, 8);
+
+rects=zeros(scales*10,4);
+j=1;
+
+for j=1:num
+    [I, J]=ind2sub(size(bin), find(class==j));
+    lt=[min(J)*step, min(I)*step];
+    br=[max(J)*step+ww/2+10, max(I)*step+wh/2+10];
+    rects(j,:)=[lt, br-lt];
+    j=j+1;
+end
+
+figure;
+imshow(photo);
+title('Composed criterion and detected global minimum')
+hold on;
+imag=scale_output(classif>.3, sps, channel, H,W,wh,ww,step);
+phandle=imagesc(imag/max(max(imag)), [0 1]);
+set(phandle, 'AlphaData', 100);
+
+
+for i=1:j-1
+    rectangle('Position', rects(i,:), 'LineWidth',2, 'EdgeColor','b');
+end
+
+%%
+
+
+figure;
+subplot(2,3,1);
+imshow(photo);
+for i=1:scales
+    subplot(2,3,i+1)
+    
+    imshow(photo);
+    title('DFFS');
+    hold on;
+    imag=scale_output(classif, sps, i, H,W,wh,ww,step);
+    phandle=imagesc(imag/max(max(imag)), [0 1]);
+    set(phandle, 'AlphaData', 125);
+end
+
 %% plot results
-imag=zeros(H, W);
-A=10;
+A=127;
+
+channel=2;
 
 figure;
 subplot(2, 2, 1);
@@ -102,48 +191,89 @@ imshow(photo);
 title('Original image')
 
 subplot(2, 2, 2);
-[v, i]=max(sps);
+[v, i]=max(spsp);
 imshow(photo);
-title('Face color provbability')
+title('Face color probability')
 hold on;
-spimage=imresize(reshape(sps, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
-imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
+imag=scale_output(spsp, sps, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 set(phandle, 'AlphaData', A);
-rectangle('Position',[js(i) is(i) 72 100], 'LineWidth',2, 'EdgeColor','b');
+% rectangle('Position',[js(channel,i) is(channel,i) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 
 subplot(2, 2, 3);
-[v, j]=min(dffss);
+[v, j]=max(dffssp);
 imshow(photo);
 title('Distance from face space')
 hold on;
-spimage=imresize(reshape(dffss, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
-imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
+imag=scale_output(dffssp, dffss, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 set(phandle, 'AlphaData', A);
-rectangle('Position',[js(j) is(j) 72 100], 'LineWidth',2, 'EdgeColor','b');
+% rectangle('Position',[js(channel,j) is(channel,j) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 subplot(2, 2, 4);
-[v, k]=min(difss);
-spimage=imresize(reshape(difss, round((H-wh)/step), []), [H-wh W-ww]);
-imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
+[v, k]=max(difssp);
+imshow(photo);
+hold on;
+imag=scale_output(difssp, difss, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 title('Distance from mean face')
 set(phandle, 'AlphaData', A);
-rectangle('Position',[js(k) is(k) 72 100], 'LineWidth',2, 'EdgeColor','b');
+% rectangle('Position',[js(channel,k) is(channel,k) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 %% combination
 
-classif=(sps/max(sps)) .* (dffss/max(dffss)) .* (difss/max(difss));
+% classif=spsp(channel,:);
+classif=spsp .* dffssp .* difssp;
+% classif=difssp(channel,:)
+% classif=classif(sps(channel, :)>0);
+
+rects=zeros(scales*10,4);
+j=1;
+
+for threshold=.1:-.02:0.09
+    for channel=scales:-1:1
+        [vals, inds]=sort(classif(channel, :), 2, 'descend');
+        for i=1:numel(inds)
+            ind=inds(i);
+            
+            if j>10 || vals(i)<threshold
+                break;
+            end
+            
+            rect=[js(channel,ind) is(channel,ind) 72*1.25^(channel-1) 100*1.25^(channel-1)];
+            overlaps=rectint(rects, rect);
+            if max(overlaps)<(0.1*72*1.25^(channel-1)*100*1.25^(channel-1)) % 10% of area
+                fprintf('Scale %d, value %d\n', channel, vals(i));
+                rects(j,:)=rect;
+                j=j+1;
+            end
+
+        end
+    end
+end
+
 
 figure;
-[v, i]=max(classif);
 imshow(photo);
 title('Composed criterion and detected global minimum')
 hold on;
-spimage=imresize(reshape(sps, round((H-wh)/step), []), [H-wh W-ww], 'nearest');
-imag(wh/2:(H-wh/2-1), ww/2:(W-ww/2-1))=spimage;
-phandle=imagesc(imag/max(max(imag))*255);
-set(phandle, 'AlphaData', 100);
-rectangle('Position',[js(i) is(i) 72 100], 'LineWidth',2, 'EdgeColor','b');
+imag=scale_output(classif, sps, 3, H,W,wh,ww,step);
+phandle=imagesc(imag/max(max(imag)), [0 1]);
+set(phandle, 'AlphaData', 200);
+
+
+for i=1:j-1
+    rectangle('Position', rects(i,:), 'LineWidth',2, 'EdgeColor','b');
+end
+
+%% max over whole space
+searchspace=zeros(H, W, scales);
+
+space=spsp(channel,:) .* dffssp(channel,:) .* difssp(channel,:);
+
+
+
+
+
+
