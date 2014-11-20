@@ -36,10 +36,12 @@ for i = 1:nsel
             eye_factors(j) = eye_openbool;                      % Save eye_openbool in array for all faces
 
             %% Phase 3: Mouth recognition
-            Im_mouth = findmouth(Im_face);                      % Determine mouth position from face picture
+            %function I = findmouth(im_face, file_name)
+            Im_mouth = findmouth(Im_face, Im_str);              % Determine mouth position from face picture
 
 
             %% Phase 4: Smile detection
+            %function result = get_smile_factor(image)
             smiling_factors(j) = get_smile_factor(Im_mouth);    % Determine smile amount
 
         end
