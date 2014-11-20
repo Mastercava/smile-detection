@@ -3,10 +3,12 @@
 % Group 3
 %
 
-% Clear all variables and close all open windows
+%% Clear all variables and close all open windows
 clear all
 close all
 clc
+
+load 'face_detection_learned.mat';
 
 [filename, pathname, filterindex] = uigetfile( ...
   {'*.jpg;*.tif;*.png;*.gif','All Image Files'
@@ -14,14 +16,15 @@ clc
    'Pick a file', ...
    'MultiSelect', 'on');
 
+%% Run
 nsel = size(filename,2);    % Number of selected files
 total_score = zeros(1,nsel);
 for i = 1:nsel
-    Im_str = [pathname(i) filename(i)]; % Make filepath/filename string
+    Im_str = strcat(pathname(i), filename(i)); % Make filepath/filename string
     Im = imread(Im_str);                % Load the image
 
     %% Phase 1: Face recognition
-    face_array = face_recognition(Im);  % Determine all faces from group picture
+    face_array = face_recognition(Im, detection_training);  % Determine all faces from group picture
     nfaces = size(face_array,2);        % Number of faces to be processed
     smiling_factors = zeros(1,nfaces);  % Pre-allocate vector
     eye_factors = zeros(1,nfaces);      % Pre-allocate vector
