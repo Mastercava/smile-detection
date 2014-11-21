@@ -1,51 +1,17 @@
-%% load data
-
-
 %% learn skin color
-N=7;
-
-mu=zeros(1,2);
-sigma=zeros(2);
-count=0;
-
-figure;
-hold on;
-
-for i=1:N
-    [H, W, ~]=size(trn_color_ims{i});
-    I=double(reshape(rgb2ycbcr(trn_color_ims{i}), H*W, 3));
-    size(I)
-    lbls=trn_color_labels{i};
-    
-    idxs=find(lbls<128);
-    size(idxs)
-    
-    pixels=I(idxs, 2:3);
-    size(pixels)
-    
-    pixels(1:10, :)
-    n=size(pixels, 1);
-    
-    scatter(pixels(:, 1), pixels(:, 2));
-    
-    count=count+n;
-    mu=mu+sum(pixels);
-    sigma=sigma+cov(pixels)*(n-1);
-end
-
-mu=mu/count;
-sigma=sigma/(count-1);
+[mu, sigma]=learn_skincolor(load_images('data/facecolor_img', '*.JPG'), load_images('data/facecolor_label', '*.png'));
 
 %% try skin segmentation
-
-I=double(reshape(rgb2ycbcr(imread('data/DSC09996.JPG')), H*W, 3));
+Im=imread('data/facecolor_img/DSC09997.JPG');
+[H, W, k]=size(Im);
+I=double(reshape(rgb2ycbcr(Im), H*W, 3));
 I=I(:, 2:3);
 ps=mvnpdf(I, mu, sigma);
 imagesc(reshape(ps, 225, 300));
 
 %% load PCA data
-trn_ims=load_images('data/eigendata');
-N=length(trn_ims)
+trn_ims=load_images('data/eigendata', '*.JPG');
+N=length(trn_ims);
 [H, W, k]=size(trn_ims{1});
 itrn=zeros(H, W, N);
 for i=1:N
@@ -55,11 +21,9 @@ end
 %% learn PCA
 [X, X_mean]=prepare_data(itrn);
 [eigenfaces, lambdas]=pca_basis(X);
-disp_eigenfaces(eigenfaces, [100 72]);
-
 
 %% detect faces
-photo=imread('data/test/DSC00014_c.JPG');
+photo=imread('data/test/DSC00103.JPG');
 
 [H, W, k]=size(photo);
 I=double(reshape(rgb2ycbcr(photo), H*W, 3));
@@ -74,7 +38,7 @@ m=10;
 scales=5;
 step=10;
 
-nwins=round((W-cww-1)*(H-cwh-1)/step^2);
+nwins=round((W-ww-1)*(H-wh-1)/step^2);
 is=zeros(scales,nwins);
 js=zeros(scales,nwins);
 dffss=zeros(scales,nwins);
@@ -110,7 +74,22 @@ spsp=sps/max(max(sps));
 dffssp=1-dffss/max(max(dffss));
 difssp=1-difss/max(max(difss));
 
-%% plot scale space
+%% plot some criterion in scale space
+criterion=spsp; % <--- criterion to plot
+
+figure;
+subplot(2,3,1);
+imshow(photo);
+for i=1:scales
+    subplot(2,3,i+1)
+    imshow(photo);
+    hold on;
+    imag=scale_output(criterion, sps, i, H,W,wh,ww,step);
+    phandle=imagesc(imag/max(max(imag)), [0 1]);
+    set(phandle, 'AlphaData', 125);
+end
+
+%% plot combined criterion in scale space
 figure;
 subplot(2,3,1);
 imshow(photo);
@@ -127,63 +106,11 @@ for i=1:scales
     set(phandle, 'AlphaData', 125);
 end
 
-%%
-classif=spsp .* dffssp .* difssp;
-classif=classif/max(max(classif));
 
-% imagesc(scale_output(classif>.3, sps, 1, H,W,wh,ww,step));
+%% plot the individual criterions on given scale
 
-classif=classif(1,1:sum(sps(1,:)>0));
-bin=classif>.3;
-bin=reshape(bin,  ceil((H-wh-1)/step), []);
-
-[class, num]=bwlabel(bin, 8);
-
-rects=zeros(scales*10,4);
-j=1;
-
-for j=1:num
-    [I, J]=ind2sub(size(bin), find(class==j));
-    lt=[min(J)*step, min(I)*step];
-    br=[max(J)*step+ww/2+10, max(I)*step+wh/2+10];
-    rects(j,:)=[lt, br-lt];
-    j=j+1;
-end
-
-figure;
-imshow(photo);
-title('Composed criterion and detected global minimum')
-hold on;
-imag=scale_output(classif>.3, sps, channel, H,W,wh,ww,step);
-phandle=imagesc(imag/max(max(imag)), [0 1]);
-set(phandle, 'AlphaData', 100);
-
-
-for i=1:j-1
-    rectangle('Position', rects(i,:), 'LineWidth',2, 'EdgeColor','b');
-end
-
-%%
-
-
-figure;
-subplot(2,3,1);
-imshow(photo);
-for i=1:scales
-    subplot(2,3,i+1)
-    
-    imshow(photo);
-    title('DFFS');
-    hold on;
-    imag=scale_output(classif, sps, i, H,W,wh,ww,step);
-    phandle=imagesc(imag/max(max(imag)), [0 1]);
-    set(phandle, 'AlphaData', 125);
-end
-
-%% plot results
-A=127;
-
-channel=2;
+channel=1; % the scale
+A=127; % alpha of overlay, 1=criterion, 255=photo
 
 figure;
 subplot(2, 2, 1);
@@ -198,8 +125,6 @@ hold on;
 imag=scale_output(spsp, sps, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 set(phandle, 'AlphaData', A);
-% rectangle('Position',[js(channel,i) is(channel,i) 72 100], 'LineWidth',2, 'EdgeColor','b');
-
 
 subplot(2, 2, 3);
 [v, j]=max(dffssp);
@@ -209,7 +134,6 @@ hold on;
 imag=scale_output(dffssp, dffss, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 set(phandle, 'AlphaData', A);
-% rectangle('Position',[js(channel,j) is(channel,j) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
 subplot(2, 2, 4);
 [v, k]=max(difssp);
@@ -219,19 +143,15 @@ imag=scale_output(difssp, difss, channel, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag))*255);
 title('Distance from mean face')
 set(phandle, 'AlphaData', A);
-% rectangle('Position',[js(channel,k) is(channel,k) 72 100], 'LineWidth',2, 'EdgeColor','b');
 
-%% combination
+%% detection results
 
-% classif=spsp(channel,:);
 classif=spsp .* dffssp .* difssp;
-% classif=difssp(channel,:)
-% classif=classif(sps(channel, :)>0);
 
 rects=zeros(scales*10,4);
 j=1;
 
-for threshold=.1:-.02:0.09
+for threshold=.1:-.02:0.06 % <--- parameters here
     for channel=scales:-1:1
         [vals, inds]=sort(classif(channel, :), 2, 'descend');
         for i=1:numel(inds)
@@ -257,7 +177,7 @@ figure;
 imshow(photo);
 title('Composed criterion and detected faces')
 hold on;
-imag=scale_output(classif, sps, 1, H,W,wh,ww,step);
+imag=scale_output(classif, sps, 2, H,W,wh,ww,step);
 phandle=imagesc(imag/max(max(imag)), [0 1]);
 set(phandle, 'AlphaData', 200);
 
@@ -266,10 +186,6 @@ for i=1:j-1
     rectangle('Position', rects(i,:), 'LineWidth',2, 'EdgeColor','b');
 end
 
-%% max over whole space
-searchspace=zeros(H, W, scales);
-
-space=spsp(channel,:) .* dffssp(channel,:) .* difssp(channel,:);
 
 
 

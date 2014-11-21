@@ -1,6 +1,6 @@
 function [ faces ] = face_recognition(photo, params)
-%UNTITLED2 detect faces in image
-%   image     color image
+%FACE_RECOGNITION detect faces in image
+%   photo     color image
 %   params    learned params, struct with fields:
 %               mu, sigma:  learned face color distribution
 %               mean_face:     mean face
@@ -56,11 +56,13 @@ difssp=1-difss/max(max(difss));
 
 %% find the faces
 
+% the combined criterion
 classif=spsp .* dffssp .* difssp;
 
 rects=zeros(scales*10,4);
 j=1;
 
+% prefer larger faces, lower the detection threshold over time
 for threshold=.1:-.02:0.05
     for channel=scales:-1:1
         [vals, inds]=sort(classif(channel, :), 2, 'descend');
@@ -74,11 +76,9 @@ for threshold=.1:-.02:0.05
             rect=[js(channel,ind) is(channel,ind) 72*1.25^(channel-1) 100*1.25^(channel-1)];
             overlaps=rectint(rects, rect);
             if max(overlaps)<(0.1*72*1.25^(channel-1)*100*1.25^(channel-1)) % 10% of area
-%                 fprintf('Scale %d, value %d\n', channel, vals(i));
                 rects(j,:)=rect;
                 j=j+1;
             end
-
         end
     end
 end
