@@ -61,7 +61,7 @@ classif=spsp .* dffssp .* difssp;
 rects=zeros(scales*10,4);
 j=1;
 
-for threshold=.1:-.02:0.09
+for threshold=.1:-.02:0.05
     for channel=scales:-1:1
         [vals, inds]=sort(classif(channel, :), 2, 'descend');
         for i=1:numel(inds)

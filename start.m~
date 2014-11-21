@@ -21,7 +21,7 @@ figure;
 nsel = size(filename,2);    % Number of selected files
 total_score = zeros(1,nsel);
 for i = 1:nsel
-    Im_str = strcat(pathname, filename{i});  % Make filepath/filename string
+    Im_str = strcat(pathname, filename{i})  % Make filepath/filename string
     Im = imread(Im_str);                % Load the image
     subplot(1,nsel,i);
     imshow(Im);
@@ -51,8 +51,9 @@ for i = 1:nsel
 
     total_score(i) = sum(eye_factors + smiling_factors)/nfaces;
                    % Load the image
+   
 %     imshow(Im);
-     title(sprintf('%s: %.4f', filename{i},total_score(i)));
+     title(sprintf('smiling score=%.4f', total_score(i)));
     
     fprintf('Smiling score: %d\n', total_score(i))
     %pause
@@ -63,5 +64,4 @@ fprintf('Best smiling score: %d\n', total_score(index))
 
 Im_str = strcat(pathname, filename{index}); % Make best photo filepath/filename string
 Im = imread(Im_str);                        % Load the best image
-figure;
 imshow(Im);
